@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,7 +9,11 @@ public class PlayerMovement : MonoBehaviour
     public Animator animator;
     public Transform model;
 
+    public Transform cam;
+
     public float speed = 3f;
+    public float turnSmoothTime = 0.1f;
+    float turnSmoothVelocity;
     public CharacterController controller;
 
     Vector3 velocity;
@@ -39,10 +44,31 @@ public class PlayerMovement : MonoBehaviour
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
-        Vector3 move = transform.right * x + transform.forward * z;
-        model.position = gameObject.transform.position;
+        if (mouseLook.thirdPerson)
+        {
+            Vector3 direction = new Vector3(x, 0f, z).normalized;
 
-        controller.Move(move * speed * Time.deltaTime);
+            if(direction.magnitude >= 0.1)
+            {
+                float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
+                float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
+
+                transform.rotation = Quaternion.Euler(0f, angle, 0f);
+
+                Vector3 moveDirection = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
+                controller.Move(moveDirection.normalized * speed * Time.deltaTime);
+            }
+
+        }
+        else
+        {
+            Vector3 move = transform.right * x + transform.forward * z;
+            model.position = gameObject.transform.position;
+
+            controller.Move(move * speed * Time.deltaTime);
+        }
+
+        
 
         if (Input.GetButtonDown("Jump"))
         {
@@ -65,12 +91,16 @@ public class PlayerMovement : MonoBehaviour
         {
             animator.SetBool("isRunning", true);
             speed = 6f;
+            model.position = gameObject.transform.position;
         }
         else
         {
             animator.SetBool("isRunning", false);
             speed = 3f;
+            model.position = gameObject.transform.position;
         }
+
+
 
         velocity.y += gravity * Time.deltaTime;
 
